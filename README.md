@@ -4,8 +4,7 @@ This module implements a polymorphic SQLAlchemy `Calculation` model, Pydantic va
 
 ## What is implemented
 
-- SQLAlchemy model with fields `id`, `type`, `inputs`, and optional `result`
-- Computed compatibility properties `a` and `b` from `inputs`
+- SQLAlchemy model with fields `id`, `a`, `b`, `type`, optional `result`, and `inputs`
 - Pydantic schemas:
   - `CalculationCreate`
   - `CalculationRead`
@@ -128,12 +127,12 @@ docker run --rm -p 8000:8000 <dockerhub-username>/module11:latest
 
 ## Rubric mapping for a/b
 
-The rubric's `a` and `b` are represented by the first two values of `inputs[]`.
-The model exposes compatibility properties `a` and `b` in `Calculation`.
+The model stores physical `a` and `b` columns and also keeps `inputs[]` for factory extensibility.
+This satisfies the rubric field requirement while preserving multi-input calculation support.
 
 ## Submission evidence checklist
 
 - GitHub Actions screenshot showing successful CI run
 - Docker Hub screenshot showing pushed image/tag
 - Reflection notes addressing challenges and decisions
-- Docker Hub repository link: `https://hub.docker.com/r/<dockerhub-username>/module11`
+- Docker Hub repository link: `https://hub.docker.com/r/ga424/module11`
