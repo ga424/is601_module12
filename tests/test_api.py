@@ -13,10 +13,10 @@ def client():
 @pytest.mark.parametrize(
     "payload, expected_result, expected_class",
     [
-        ({"type": "addition", "inputs": [3, 4]}, 7.0, "addition"),
-        ({"type": "subtraction", "inputs": [10, 4]}, 6.0, "subtraction"),
-        ({"type": "multiplication", "inputs": [5, 6]}, 30.0, "multiplication"),
-        ({"type": "division", "inputs": [12, 3]}, 4.0, "division"),
+        ({"type": "addition", "inputs": [3, 4, 5]}, 12.0, "addition"),
+        ({"type": "subtraction", "inputs": [10, 4, 1]}, 5.0, "subtraction"),
+        ({"type": "multiplication", "inputs": [5, 6, 2]}, 60.0, "multiplication"),
+        ({"type": "division", "inputs": [120, 3, 2]}, 20.0, "division"),
     ],
 )
 def test_calculate_success(client, payload, expected_result, expected_class):

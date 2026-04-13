@@ -24,8 +24,13 @@ class Calculation(Base):
     }
 
     @classmethod
-    def create(cls, calculation_type: str, inputs: list[float]) -> "Calculation":
-        if len(inputs) < 2:
+    def create(cls, calculation_type: str, *inputs: float | list[float]) -> "Calculation":
+        if len(inputs) == 1 and isinstance(inputs[0], list):
+            normalized_inputs = inputs[0]
+        else:
+            normalized_inputs = [float(value) for value in inputs]
+
+        if len(normalized_inputs) < 2:
             raise ValueError("At least two input values are required")
 
         calculation_classes = {
@@ -37,7 +42,11 @@ class Calculation(Base):
         calculation_class = calculation_classes.get(calculation_type.lower())
         if not calculation_class:
             raise ValueError(f"Unsupported calculation type: {calculation_type}")
-        return calculation_class(inputs=inputs, a=float(inputs[0]), b=float(inputs[1]))
+        return calculation_class(
+            inputs=normalized_inputs,
+            a=float(normalized_inputs[0]),
+            b=float(normalized_inputs[1]),
+        )
 
     def get_result(self) -> float:
         raise NotImplementedError("Subclasses must implement get_result()")
