@@ -1,7 +1,7 @@
 import time
 
 from fastapi import Depends, FastAPI, HTTPException
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -12,6 +12,36 @@ from app.schema import CalculationCreate, CalculationRead
 app = FastAPI()
 
 
+def ensure_calculation_schema() -> None:
+    with engine.begin() as connection:
+        inspector = inspect(connection)
+        if "calculations" not in inspector.get_table_names():
+            return
+
+        existing_columns = {column["name"] for column in inspector.get_columns("calculations")}
+
+        if "a" not in existing_columns:
+            connection.execute(
+                text("ALTER TABLE calculations ADD COLUMN IF NOT EXISTS a DOUBLE PRECISION NOT NULL DEFAULT 0")
+            )
+
+        if "b" not in existing_columns:
+            connection.execute(
+                text("ALTER TABLE calculations ADD COLUMN IF NOT EXISTS b DOUBLE PRECISION NOT NULL DEFAULT 0")
+            )
+
+        connection.execute(
+            text(
+                """
+                UPDATE calculations
+                SET
+                    a = COALESCE((inputs->>0)::double precision, a),
+                    b = COALESCE((inputs->>1)::double precision, b)
+                """
+            )
+        )
+
+
 @app.on_event("startup")
 def on_startup():
     max_attempts = 30
@@ -20,6 +50,7 @@ def on_startup():
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
             Base.metadata.create_all(bind=engine)
+            ensure_calculation_schema()
             return
         except SQLAlchemyError:
             if attempt == max_attempts:
