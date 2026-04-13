@@ -36,7 +36,21 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run application
+Create environment file:
+
+```bash
+cp .env.example .env
+```
+
+## Run application (local PostgreSQL)
+
+Start project PostgreSQL (recommended):
+
+```bash
+docker compose up -d db
+```
+
+Then run the app locally:
 
 ```bash
 uvicorn app.main:app --reload
@@ -68,6 +82,13 @@ export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/module11_test
 pytest -q
 ```
 
+If using the compose database, use port 55432:
+
+```bash
+export DATABASE_URL="postgresql://postgres:postgres@localhost:55432/module11_db"
+pytest -q
+```
+
 ## CI/CD
 
 - CI workflow: `.github/workflows/ci.yml`
@@ -83,7 +104,17 @@ Required repository secrets:
 
 ## Docker
 
-Build:
+Run full stack (PostgreSQL + app):
+
+```bash
+docker compose up --build
+```
+
+App URL:
+
+- `http://127.0.0.1:8000/`
+
+Build image only:
 
 ```bash
 docker build -t <dockerhub-username>/module11:latest .
@@ -94,6 +125,11 @@ Run:
 ```bash
 docker run --rm -p 8000:8000 <dockerhub-username>/module11:latest
 ```
+
+## Rubric mapping for a/b
+
+The rubric's `a` and `b` are represented by the first two values of `inputs[]`.
+The model exposes compatibility properties `a` and `b` in `Calculation`.
 
 ## Submission evidence checklist
 

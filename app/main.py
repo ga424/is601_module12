@@ -1,4 +1,8 @@
+import time
+
 from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
@@ -10,7 +14,17 @@ app = FastAPI()
 
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
+    max_attempts = 30
+    for attempt in range(1, max_attempts + 1):
+        try:
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            Base.metadata.create_all(bind=engine)
+            return
+        except SQLAlchemyError:
+            if attempt == max_attempts:
+                raise
+            time.sleep(1)
 
 @app.get("/")
 def home():

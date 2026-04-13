@@ -3,6 +3,8 @@ name: Docker Publish
 on:
   workflow_dispatch:
   push:
+    branches:
+      - "main"
     tags:
       - "v*"
 
@@ -25,5 +27,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/module11:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/module11:${{ github.ref_name }}
+            ga424/module11:latest
+            ga424/module11:${{ github.sha }}
