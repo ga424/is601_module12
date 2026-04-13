@@ -64,6 +64,12 @@ pytest -q
 
 If you want to target the Dockerized database explicitly, set `DATABASE_URL` to the compose PostgreSQL connection string and run the same test command.
 
+Run local security scan:
+
+```bash
+./start.sh scan
+```
+
 ## CI/CD
 
 - CI workflow: `.github/workflows/ci.yml`
@@ -71,6 +77,8 @@ If you want to target the Dockerized database explicitly, set `DATABASE_URL` to 
   - Uses PostgreSQL service container
 - Docker publish workflow: `.github/workflows/docker-publish.yml`
   - Builds and pushes Docker image to Docker Hub on tags (`v*`) or manual dispatch
+- Security scan workflow: `.github/workflows/security-scan.yml`
+  - Runs Trivy filesystem and image scans
 
 Required repository secrets:
 

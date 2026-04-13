@@ -23,6 +23,7 @@ Commands:
     ps          Show running services
     clean       Remove containers, volumes, and networks
     test        Run pytest in a disposable app container
+    scan        Run Trivy filesystem security scan
     shell       Open a shell in the app container
     help        Show this help message
 
@@ -96,6 +97,16 @@ case "${1:-help}" in
     test)
         echo -e "${GREEN}Running tests in container...${NC}"
         compose run --rm app pytest -q
+        ;;
+    scan)
+        echo -e "${GREEN}Running Trivy filesystem scan...${NC}"
+        docker run --rm -v "$PWD":/repo -w /repo aquasec/trivy:0.69.3 fs \
+            --scanners vuln,secret,misconfig \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 0 \
+            .
+        echo -e "${GREEN}Scan complete.${NC}"
         ;;
     shell)
         echo -e "${GREEN}Opening shell in app container...${NC}"

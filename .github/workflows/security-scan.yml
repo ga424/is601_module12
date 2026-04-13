@@ -1,0 +1,40 @@
+name: Security Scan
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  trivy-fs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        run: |
+          docker run --rm -v "$PWD":/repo -w /repo aquasec/trivy:0.69.3 fs \
+            --scanners vuln,secret,misconfig \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 0 \
+            .
+
+  trivy-image:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t module11:scan .
+
+      - name: Run Trivy image scan
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.69.3 image \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 0 \
+            module11:scan
