@@ -1,57 +1,37 @@
-from app.schema import CalculationRequest, CalculationResponse
-from app.models import Addition, Subtraction, Multiplication, Division
-from fastapi import FastAPI, HTTPException
-from enum import Enum
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.orm import Session
+
+from app.database import Base, engine, get_db
+from app.models import Calculation
+from app.schema import CalculationCreate, CalculationRead
 
 app = FastAPI()
 
-class CalculationType(str, Enum):
-    addition = "addition"
-    subtraction = "subtraction"
-    multiplication = "multiplication"
-    division = "division"   
+
+@app.on_event("startup")
+def on_startup():
+    Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def home():
     return {"message": "Successfully accessed the API. Use the /calculate endpoint to perform calculations." }
 
-@app.post("/calculate", response_model=CalculationResponse)
-def calculate(request: CalculationRequest):
-    calculator_map = {
-        CalculationType.addition: Addition,
-        CalculationType.subtraction: Subtraction,
-        CalculationType.multiplication: Multiplication,
-        CalculationType.division: Division,
-    }
 
-    calculator_cls = calculator_map.get(request.calculation_type)
-    if calculator_cls is None:
-        raise HTTPException(status_code=400, detail="Invalid calculation type")
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
 
-    calculation = calculator_cls.create(
-        calculation_type=request.calculation_type.value,
-        operand1=request.operand1,
-        operand2=request.operand2,
-        userid=request.userid,
-        result=0.0,
-    )
-
+@app.post("/calculate", response_model=CalculationRead)
+def calculate(request: CalculationCreate, db: Session = Depends(get_db)):
+    calculation = Calculation.create(calculation_type=request.type.value, inputs=request.inputs)
     try:
         result = calculation.get_result()
-    except ZeroDivisionError as exc:
+    except ValueError as exc:
         raise HTTPException(status_code=400, detail="Cannot divide by zero") from exc
 
-    class_name = calculation.__class__.__name__
-    
-    response = CalculationResponse(
-        calculation_type=request.calculation_type,
-        operand1=request.operand1,
-        operand2=request.operand2,
-        userid=request.userid,
-        result=result,
-        class_name=class_name,
-        persisted=False
-    )
-    
-    return response
+    calculation.result = result
+    db.add(calculation)
+    db.commit()
+    db.refresh(calculation)
+    return calculation
 
