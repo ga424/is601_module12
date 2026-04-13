@@ -37,7 +37,7 @@ def health():
 
 @app.post("/calculate", response_model=CalculationRead)
 def calculate(request: CalculationCreate, db: Session = Depends(get_db)):
-    calculation = Calculation.create(calculation_type=request.type.value, inputs=request.inputs)
+    calculation = Calculation.create(request.type.value, *request.inputs)
     try:
         result = calculation.get_result()
     except ValueError as exc:
