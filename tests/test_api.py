@@ -4,33 +4,35 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-client = TestClient(app)
+@pytest.fixture
+def client():
+    with TestClient(app) as test_client:
+        yield test_client
 
 
 @pytest.mark.parametrize(
     "payload, expected_result, expected_class",
     [
-        ({"calculation_type": "addition", "operand1": 3, "operand2": 4, "userid": "u1"}, 7.0, "Addition"),
-        ({"calculation_type": "subtraction", "operand1": 10, "operand2": 4, "userid": "u2"}, 6.0, "Subtraction"),
-        ({"calculation_type": "multiplication", "operand1": 5, "operand2": 6, "userid": "u3"}, 30.0, "Multiplication"),
-        ({"calculation_type": "division", "operand1": 12, "operand2": 3, "userid": "u4"}, 4.0, "Division"),
+        ({"type": "addition", "inputs": [3, 4]}, 7.0, "addition"),
+        ({"type": "subtraction", "inputs": [10, 4]}, 6.0, "subtraction"),
+        ({"type": "multiplication", "inputs": [5, 6]}, 30.0, "multiplication"),
+        ({"type": "division", "inputs": [12, 3]}, 4.0, "division"),
     ],
 )
-def test_calculate_success(payload, expected_result, expected_class):
+def test_calculate_success(client, payload, expected_result, expected_class):
     response = client.post("/calculate", json=payload)
 
     assert response.status_code == 200
     data = response.json()
-    assert data["calculation_type"] == payload["calculation_type"]
-    assert data["operand1"] == float(payload["operand1"])
-    assert data["operand2"] == float(payload["operand2"])
-    assert data["userid"] == payload["userid"]
+    assert data["type"] == expected_class
+    assert data["inputs"] == [float(v) for v in payload["inputs"]]
     assert data["result"] == expected_result
-    assert data["class_name"] == expected_class
-    assert data["persisted"] is False
+    assert data["id"]
+    assert data["created_at"]
+    assert data["updated_at"]
 
 
-def test_root_endpoint():
+def test_root_endpoint(client):
     response = client.get("/")
 
     assert response.status_code == 200
@@ -39,10 +41,10 @@ def test_root_endpoint():
     }
 
 
-def test_division_by_zero_is_rejected():
+def test_division_by_zero_is_rejected(client):
     response = client.post(
         "/calculate",
-        json={"calculation_type": "division", "operand1": 10, "operand2": 0, "userid": "u5"},
+        json={"type": "division", "inputs": [10, 0]},
     )
 
     assert response.status_code == 422
@@ -50,10 +52,10 @@ def test_division_by_zero_is_rejected():
     assert body["detail"]
 
 
-def test_invalid_calculation_type_is_rejected():
+def test_invalid_calculation_type_is_rejected(client):
     response = client.post(
         "/calculate",
-        json={"calculation_type": "modulo", "operand1": 10, "operand2": 3, "userid": "u6"},
+        json={"type": "modulo", "inputs": [10, 3]},
     )
 
     assert response.status_code == 422
