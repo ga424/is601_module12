@@ -105,3 +105,4 @@ docker run --rm -p 8000:8000 <dockerhub-username>/module11:latest
 
 - The model stores physical `a` and `b` columns for the first two operands and keeps `inputs[]` for the full request payload.
 - The documentation in `docs/` includes the C4 architecture view and a navigation index.
+- Docker Hub repository: https://hub.docker.com/repository/docker/ga424/module11/general
