@@ -14,6 +14,9 @@ app = FastAPI()
 
 
 def ensure_calculation_schema() -> None:
+    if engine.dialect.name != "postgresql":
+        return
+
     with engine.begin() as connection:
         inspector = inspect(connection)
         if "calculations" not in inspector.get_table_names():
@@ -135,18 +138,19 @@ def read_calculation(calculation_id: str, db: Session = Depends(get_db)):
 
 @app.put("/calculations/{calculation_id}", response_model=CalculationRead)
 def update_calculation(calculation_id: str, request: CalculationCreate, db: Session = Depends(get_db)):
-    calculation = get_calculation_or_404(calculation_id, db)
     updated_calculation = Calculation.create(request.type.value, *request.inputs)
-
-    calculation.type = updated_calculation.type
-    calculation.inputs = updated_calculation.inputs
-    calculation.a = updated_calculation.a
-    calculation.b = updated_calculation.b
-    calculation.result = updated_calculation.get_result()
-
+    db.query(Calculation).filter(Calculation.id == calculation_id).update(
+        {
+            Calculation.type: updated_calculation.type,
+            Calculation.inputs: updated_calculation.inputs,
+            Calculation.a: updated_calculation.a,
+            Calculation.b: updated_calculation.b,
+            Calculation.result: updated_calculation.get_result(),
+        },
+        synchronize_session=False,
+    )
     db.commit()
-    db.refresh(calculation)
-    return calculation
+    return get_calculation_or_404(calculation_id, db)
 
 
 @app.delete("/calculations/{calculation_id}", status_code=status.HTTP_204_NO_CONTENT)
