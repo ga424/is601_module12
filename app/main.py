@@ -1,13 +1,14 @@
 import time
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
-from app.models import Calculation
-from app.schema import CalculationCreate, CalculationRead
+from app.models import Calculation, User
+from app.schema import CalculationCreate, CalculationRead, LoginResponse, UserCreate, UserLogin, UserRead
+from app.security import hash_password, verify_password
 
 app = FastAPI()
 
@@ -65,6 +66,31 @@ def home():
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+@app.post("/users/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+def register_user(payload: UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == payload.email).first()
+    if existing_user is not None:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+
+    user = User(
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@app.post("/users/login", response_model=LoginResponse)
+def login_user(payload: UserLogin, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == payload.email).first()
+    if user is None or not verify_password(payload.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+
+    return {"message": "Login successful", "user": user}
 
 @app.post("/calculate", response_model=CalculationRead)
 def calculate(request: CalculationCreate, db: Session = Depends(get_db)):

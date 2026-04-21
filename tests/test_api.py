@@ -62,3 +62,66 @@ def test_invalid_calculation_type_is_rejected(client):
 
     assert response.status_code == 422
     assert response.json()["detail"]
+
+
+def test_register_user_success(client):
+    response = client.post(
+        "/users/register",
+        json={"email": "student@example.com", "password": "strongpassword123"},
+    )
+
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == "student@example.com"
+    assert data["is_active"] is True
+    assert data["id"]
+    assert data["created_at"]
+    assert data["updated_at"]
+
+
+def test_register_user_rejects_duplicate_email(client):
+    first = client.post(
+        "/users/register",
+        json={"email": "dup@example.com", "password": "strongpassword123"},
+    )
+    assert first.status_code == 201
+
+    response = client.post(
+        "/users/register",
+        json={"email": "dup@example.com", "password": "anotherstrongpassword"},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"] == "Email already registered"
+
+
+def test_login_user_success(client):
+    client.post(
+        "/users/register",
+        json={"email": "login@example.com", "password": "strongpassword123"},
+    )
+
+    response = client.post(
+        "/users/login",
+        json={"email": "login@example.com", "password": "strongpassword123"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["message"] == "Login successful"
+    assert data["user"]["email"] == "login@example.com"
+
+
+def test_login_user_rejects_invalid_password(client):
+    client.post(
+        "/users/register",
+        json={"email": "badpass@example.com", "password": "strongpassword123"},
+    )
+
+    response = client.post(
+        "/users/login",
+        json={"email": "badpass@example.com", "password": "wrongpassword123"},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Invalid email or password"
