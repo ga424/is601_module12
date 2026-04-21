@@ -4,6 +4,44 @@ from enum import Enum
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
+class UserCreate(BaseModel):
+    email: str = Field(..., min_length=5, max_length=255, examples=["student@example.com"])
+    password: str = Field(..., min_length=8, max_length=128, examples=["strongpassword123"])
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        normalized = value.strip().lower()
+        if "@" not in normalized or normalized.startswith("@") or normalized.endswith("@"):
+            raise ValueError("Invalid email format")
+        return normalized
+
+
+class UserRead(BaseModel):
+    id: str
+    email: str
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UserLogin(BaseModel):
+    email: str = Field(..., min_length=5, max_length=255)
+    password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("email")
+    @classmethod
+    def normalize_email(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class LoginResponse(BaseModel):
+    message: str
+    user: UserRead
+
+
 class CalculationType(str, Enum):
     ADDITION = "addition"
     SUBTRACTION = "subtraction"
