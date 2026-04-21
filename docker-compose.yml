@@ -1,11 +1,11 @@
 services:
   db:
     image: postgres:16
-    container_name: module11-db
+    container_name: module12-db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: module11_db
+      POSTGRES_DB: module12_db
     ports:
       - "55432:5432"
     healthcheck:
@@ -18,9 +18,9 @@ services:
 
   app:
     build: .
-    container_name: module11-app
+    container_name: module12-app
     environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/module11_db
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/module12_db
     ports:
       - "8000:8000"
     depends_on:
