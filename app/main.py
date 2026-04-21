@@ -58,6 +58,25 @@ def on_startup():
                 raise
             time.sleep(1)
 
+
+def get_calculation_or_404(calculation_id: str, db: Session) -> Calculation:
+    calculation = db.query(Calculation).filter(Calculation.id == calculation_id).first()
+    if calculation is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Calculation not found")
+    return calculation
+
+
+def save_calculation(calculation: Calculation, db: Session) -> Calculation:
+    try:
+        calculation.result = calculation.get_result()
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+    db.add(calculation)
+    db.commit()
+    db.refresh(calculation)
+    return calculation
+
 @app.get("/")
 def home():
     return {"message": "Successfully accessed the API. Use the /calculate endpoint to perform calculations." }
@@ -95,14 +114,45 @@ def login_user(payload: UserLogin, db: Session = Depends(get_db)):
 @app.post("/calculate", response_model=CalculationRead)
 def calculate(request: CalculationCreate, db: Session = Depends(get_db)):
     calculation = Calculation.create(request.type.value, *request.inputs)
-    try:
-        result = calculation.get_result()
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Cannot divide by zero") from exc
+    return save_calculation(calculation, db)
 
-    calculation.result = result
-    db.add(calculation)
+
+@app.post("/calculations", response_model=CalculationRead, status_code=status.HTTP_201_CREATED)
+def create_calculation(request: CalculationCreate, db: Session = Depends(get_db)):
+    calculation = Calculation.create(request.type.value, *request.inputs)
+    return save_calculation(calculation, db)
+
+
+@app.get("/calculations", response_model=list[CalculationRead])
+def browse_calculations(db: Session = Depends(get_db)):
+    return db.query(Calculation).order_by(Calculation.created_at.desc()).all()
+
+
+@app.get("/calculations/{calculation_id}", response_model=CalculationRead)
+def read_calculation(calculation_id: str, db: Session = Depends(get_db)):
+    return get_calculation_or_404(calculation_id, db)
+
+
+@app.put("/calculations/{calculation_id}", response_model=CalculationRead)
+def update_calculation(calculation_id: str, request: CalculationCreate, db: Session = Depends(get_db)):
+    calculation = get_calculation_or_404(calculation_id, db)
+    updated_calculation = Calculation.create(request.type.value, *request.inputs)
+
+    calculation.type = updated_calculation.type
+    calculation.inputs = updated_calculation.inputs
+    calculation.a = updated_calculation.a
+    calculation.b = updated_calculation.b
+    calculation.result = updated_calculation.get_result()
+
     db.commit()
     db.refresh(calculation)
     return calculation
+
+
+@app.delete("/calculations/{calculation_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_calculation(calculation_id: str, db: Session = Depends(get_db)):
+    calculation = get_calculation_or_404(calculation_id, db)
+    db.delete(calculation)
+    db.commit()
+    return None
 

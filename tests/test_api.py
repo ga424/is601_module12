@@ -125,3 +125,61 @@ def test_login_user_rejects_invalid_password(client):
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid email or password"
+
+
+def test_calculation_crud_flow(client):
+    create_response = client.post(
+        "/calculations",
+        json={"type": "addition", "inputs": [2, 3, 4]},
+    )
+
+    assert create_response.status_code == 201
+    created = create_response.json()
+    calculation_id = created["id"]
+    assert created["result"] == 9.0
+
+    list_response = client.get("/calculations")
+    assert list_response.status_code == 200
+    calculations = list_response.json()
+    assert any(item["id"] == calculation_id for item in calculations)
+
+    read_response = client.get(f"/calculations/{calculation_id}")
+    assert read_response.status_code == 200
+    read_data = read_response.json()
+    assert read_data["id"] == calculation_id
+    assert read_data["type"] == "addition"
+    assert read_data["inputs"] == [2.0, 3.0, 4.0]
+
+    update_response = client.put(
+        f"/calculations/{calculation_id}",
+        json={"type": "multiplication", "inputs": [2, 3, 4]},
+    )
+    assert update_response.status_code == 200
+    updated = update_response.json()
+    assert updated["id"] == calculation_id
+    assert updated["type"] == "multiplication"
+    assert updated["result"] == 24.0
+
+    delete_response = client.delete(f"/calculations/{calculation_id}")
+    assert delete_response.status_code == 204
+
+    missing_response = client.get(f"/calculations/{calculation_id}")
+    assert missing_response.status_code == 404
+    assert missing_response.json()["detail"] == "Calculation not found"
+
+
+def test_calculation_create_rejects_invalid_payload(client):
+    response = client.post(
+        "/calculations",
+        json={"type": "division", "inputs": [10, 0]},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"]
+
+
+def test_calculation_delete_missing_returns_not_found(client):
+    response = client.delete("/calculations/not-a-real-id")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Calculation not found"
