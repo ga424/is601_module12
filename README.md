@@ -1,20 +1,27 @@
-# Module 11 - Calculation API
+# Module 12 - User + Calculation API
 
-This project provides a FastAPI calculation service with PostgreSQL persistence, validation, Docker support, and CI/CD.
+This project provides a FastAPI service with user registration/login, calculation CRUD, PostgreSQL persistence, Docker support, and CI/CD to Docker Hub.
 
 ## Quick Links
 
 - [Project docs](docs/README.md)
 - [Architecture diagrams](docs/C4_ARCHITECTURE.md)
-- [Project reflection](REFLECTION.md)
 - [Helper script](start.sh)
 
 ## What it does
 
-- Accepts calculation requests with a `type` and a list of numeric `inputs`
-- Supports addition, subtraction, multiplication, and division
-- Stores each calculation in PostgreSQL
-- Exposes a health endpoint for runtime checks
+- Implements user authentication endpoints:
+  - `POST /users/register`
+  - `POST /users/login`
+- Implements calculation BREAD endpoints:
+  - `GET /calculations`
+  - `GET /calculations/{id}`
+  - `POST /calculations`
+  - `PUT /calculations/{id}`
+  - `DELETE /calculations/{id}`
+- Preserves legacy calculation endpoint `POST /calculate`
+- Stores users and calculations in PostgreSQL
+- Exposes OpenAPI docs and a health endpoint
 
 ## Setup
 
@@ -52,18 +59,61 @@ Open the app and docs:
 ## Example request
 
 ```bash
-curl -X POST http://127.0.0.1:8000/calculate \
+curl -X POST http://127.0.0.1:8000/calculations \
   -H "Content-Type: application/json" \
   -d '{"type":"addition","inputs":[3,4,5]}'
+```
+
+Register user:
+
+```bash
+curl -X POST http://127.0.0.1:8000/users/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"student@example.com","password":"strongpassword123"}'
+```
+
+Login user:
+
+```bash
+curl -X POST http://127.0.0.1:8000/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"student@example.com","password":"strongpassword123"}'
 ```
 
 ## Test
 
 ```bash
-pytest -q
+python3 -m pytest -q
 ```
 
 If you want to target the Dockerized database explicitly, set `DATABASE_URL` to the compose PostgreSQL connection string and run the same test command.
+
+Run API-only tests:
+
+```bash
+python3 -m pytest -q tests/test_api.py
+```
+
+Run DB integration tests:
+
+```bash
+python3 -m pytest -q tests/test_integration_db.py
+```
+
+## Manual OpenAPI checks
+
+1. Start services: `./start.sh up` (or `docker compose up --build`)
+2. Open `http://127.0.0.1:8000/docs`
+3. Verify user endpoints:
+   - `POST /users/register` creates a user (201)
+   - `POST /users/login` validates credentials (200)
+4. Verify calculation endpoints:
+   - `POST /calculations` creates a calculation (201)
+   - `GET /calculations` lists calculations (200)
+   - `GET /calculations/{id}` returns one calculation (200)
+   - `PUT /calculations/{id}` updates calculation values/result (200)
+   - `DELETE /calculations/{id}` removes the calculation (204)
+5. Verify invalid payloads return expected error codes (e.g. 401/404/409/422)
 
 Run local security scan:
 
@@ -101,17 +151,17 @@ App URL:
 Build image only:
 
 ```bash
-docker build -t <dockerhub-username>/module11:latest .
+docker build -t <dockerhub-username>/module12:latest .
 ```
 
 Run:
 
 ```bash
-docker run --rm -p 8000:8000 <dockerhub-username>/module11:latest
+docker run --rm -p 8000:8000 <dockerhub-username>/module12:latest
 ```
 
 ## Notes
 
 - The model stores physical `a` and `b` columns for the first two operands and keeps `inputs[]` for the full request payload.
 - The documentation in `docs/` includes the C4 architecture view and a navigation index.
-- Docker Hub repository: https://hub.docker.com/repository/docker/ga424/module11/general
+- Docker Hub repository: https://hub.docker.com/repository/docker/ga424/module12/general

@@ -1,6 +1,6 @@
 # Documentation
 
-This folder collects the architecture notes for Module 11.
+This folder collects the architecture notes for Module 12.
 
 ## Navigation
 
